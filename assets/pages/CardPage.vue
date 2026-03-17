@@ -1,38 +1,55 @@
 <script setup>
-import { onMounted, ref } from 'vue';
-import { useRoute } from 'vue-router';
-import { fetchCard } from '../services/cardService';
-import CardProperty from '../components/CardProperty.vue';
+import { ref, watch } from 'vue';
+import { searchCard } from '../services/cardService';
 
-const route = useRoute();
-const card = ref({});
-const loadingCard = ref(true);
+const searchQuery = ref('');
+const cards = ref([]);
+const loading = ref(false);
 
-async function loadCard(uuid) {
-    loadingCard.value = true;
-    card.value = await fetchCard(uuid);
-    loadingCard.value = false;
+async function performSearch(name) {
+  if (name.length < 3) {
+    cards.value = [];
+    return;
+  }
+
+  loading.value = true;
+  try {
+    cards.value = await searchCard(name);
+  } catch (error) {
+    console.error("Erreur recherche:", error);
+  } finally {
+    loading.value = false;
+  }
 }
 
-onMounted(() => {
-    loadCard(route.params.uuid);
+watch(searchQuery, (newVal) => {
+  performSearch(newVal);
 });
-
 </script>
 
 <template>
-    <div class="loading" v-if="loadingCard">Loading...</div>
+  <div>
+    <h1>Rechercher une Carte</h1>
+
+    <input
+        v-model="searchQuery"
+        placeholder="Tapez le nom d'une carte..."
+        class="search-field"
+    />
+  </div>
+
+  <div class="card-list">
+    <div v-if="loading">Chargement...</div>
     <div v-else>
-        <div class="card">
-            <h1>{{ card.name }}</h1>
-            <CardProperty name="coût en mana" :value="card.manaCost" />
-            <pre class="card-property-text">{{ card.text }}</pre>
-            <CardProperty name="Type" :value="card.type" />
-            <CardProperty name="Rareté" :value="card.rarity" />
-            <CardProperty name="Édition" :value="card.setCode" />
-        </div>
+      <div class="card" v-for="c in cards" :key="c.uuid">
+        <router-link :to="{ name: 'get-card', params: { uuid: c.uuid } }">
+          {{ c.name }} - {{ c.uuid }}
+        </router-link>
+      </div>
+
+      <div v-if="searchQuery.length >= 3 && cards.length === 0 && !loading">
+        Aucune carte trouvée.
+      </div>
     </div>
-    <div>
-        <router-link :to="{ name: 'all-cards' }">Retourner à la liste complète</router-link>
-    </div>
+  </div>
 </template>

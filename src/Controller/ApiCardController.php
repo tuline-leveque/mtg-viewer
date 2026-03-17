@@ -42,4 +42,16 @@ class ApiCardController extends AbstractController
         }
         return $this->json($card);
     }
+
+
+    #[Route('/search/{name}', name: 'api_card_search', methods: ['GET'])]
+    #[OA\Get(description: 'Recherche une carte par son nom exact')]
+    #[OA\Parameter(name: 'name', description: 'Nom de la carte', in: 'path', required: true, schema: new OA\Schema(type: 'string'))]
+    #[OA\Response(response: 200, description: 'Carte trouvée')]
+    public function cardSearch(string $name): Response
+    {
+        $cards = $this->entityManager->getRepository(Card::class)->getCardsByName($name);
+
+        return $this->json($cards, 200, [], ['groups' => 'card:read']);
+    }
 }
